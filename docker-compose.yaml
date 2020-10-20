@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  backend:
+    container_name: "go_backend"
+    tty: true
+    image: golang:1.15-alpine
+    volumes:
+      - ./backend:/go/src/app
+    working_dir: /go/src/app
+    command: go run cmd/main/main.go
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+
+  db:
+    container_name: "mysql"
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=secret
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    ports:
+      - 3306:3306
+
+  redis:
+    container_name: "redis"
+    image: redis:alpine
+
+  frontend:
+    container_name: "node_frontend"
+    image: node:latest
+    volumes:
+      - ./frontent:/var/app
+    depends_on:
+      - backend

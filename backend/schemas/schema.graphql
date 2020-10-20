@@ -1,0 +1,10 @@
+type Course {
+    name: String!
+    admins: [User!]!
+    students: [User!]!
+}
+
+type User {
+    name: String!
+    courses: [Course!]!
+}
