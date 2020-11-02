@@ -26,20 +26,26 @@ type Logger struct {
 	Middleware
 }
 
-func AuthenticationMiddleware(next http.Handler) *Authentication {
-	return &Authentication{Middleware{next}}
+func AuthenticationMiddleware(next http.Handler) *http.Handler {
+	var handler http.Handler = Authentication{Middleware{next}}
+	return &handler
 }
 
-func AuthorizationMiddleware(next http.Handler) *Authorization {
-	return &Authorization{Middleware{next}}
+func AuthorizationMiddleware(next http.Handler) *http.Handler {
+	var handler http.Handler = Authorization{Middleware{next}}
+	return &handler
 }
 
-func CSRFMiddleware(next http.Handler) *CSRF {
-	return &CSRF{Middleware{next}}
+func CSRFMiddleware(next http.Handler) *http.Handler {
+	serverConfig := ServerConfig{}
+	serverConfig.LoadConfig()
+	var handler http.Handler = CSRF{serverConfig.CSRF.ExcludedPaths, serverConfig.CSRF.UseCookies, Middleware{next}}
+	return &handler
 }
 
-func LoggerMiddleware(next http.Handler) *Logger {
-	return &Logger{Middleware{next}}
+func LoggerMiddleware(next http.Handler) *http.Handler {
+	var handler http.Handler = Logger{Middleware{next}}
+	return &handler
 }
 
 func (auth Authentication) ServeHTTP(w http.ResponseWriter, r *http.Request) {

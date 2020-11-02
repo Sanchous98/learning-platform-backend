@@ -1,21 +1,39 @@
 package server
 
 import (
+	"crypto/tls"
+	"golang.org/x/crypto/acme/autocert"
 	"log"
 	"net/http"
 )
 
-var middlewares = []func(handle http.Handler) http.Handler{
-	LoggerMiddleware,
-}
-
 func Listen() {
-	server := http.NewServeMux()
-	server.HandleFunc("/", queryHandler)
-	wrappedServer := middleware(server)
-	log.Print("SERVER STARTED")
-	// TODO: Secure connection. Use "Let's encrypt" to get TLS certificate
-	log.Fatal(http.ListenAndServe(":80", wrappedServer))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", queryHandler)
+	serverConfig := ServerConfig{}
+	serverConfig.LoadConfig()
+
+	// TODO: Test on real machine, because not working for localhost
+	certManager := autocert.Manager{
+		Prompt: autocert.AcceptTOS,
+		Cache:  autocert.DirCache("cert-cache"),
+		// Put your domain here:
+		HostPolicy: autocert.HostWhitelist(serverConfig.Domain),
+	}
+
+	server := &http.Server{
+		Addr:    ":443",
+		Handler: getGlobalMiddlewares(mux),
+		TLSConfig: &tls.Config{
+			GetCertificate: certManager.GetCertificate,
+		},
+	}
+
+	log.Print("SERVER STARTED ON PORT 80")
+	go log.Fatal(http.ListenAndServe(":80", certManager.HTTPHandler(nil)))
+
+	log.Print("SERVER STARTED ON PORT 443")
+	go log.Fatal(server.ListenAndServeTLS("", ""))
 }
 
 func queryHandler(w http.ResponseWriter, r *http.Request) {
@@ -23,11 +41,18 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Handle GraphQL query
 }
 
-func middleware(handle http.Handler) http.Handler {
-	var handled http.Handler = LoggerMiddleware(handle)
-	handled = AuthenticationMiddleware(handle)
-	handled = AuthorizationMiddleware(handled)
-	handled = CSRFMiddleware(handled)
+func getGlobalMiddlewares(handle http.Handler) http.Handler {
+	var handled http.Handler
+	middlewares := []func(http.Handler) *http.Handler{
+		LoggerMiddleware,
+		AuthenticationMiddleware,
+		AuthorizationMiddleware,
+		CSRFMiddleware,
+	}
+
+	for _, middleware := range middlewares {
+		handled = *middleware(handle)
+	}
 
 	return handled
 }
