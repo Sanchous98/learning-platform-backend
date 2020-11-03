@@ -41,3 +41,8 @@ type Course {
     organisation: Organisation!
     members: [User]
 }
+
+type Query {
+    user(id: ID!): User
+    course(id: ID!): Course
+}
