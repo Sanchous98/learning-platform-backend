@@ -32,3 +32,13 @@ services:
   redis:
     container_name: "redis"
     image: redis:alpine
+
+  monitoring:
+    container_name: "prometheus"
+    image: prom/prometheus:latest
+    ports:
+      - 9090:9090
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
