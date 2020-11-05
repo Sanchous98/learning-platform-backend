@@ -5,4 +5,3 @@ scrape_configs:
       - targets:
           - backend:80
           - backend:443
-          - backend:8080
