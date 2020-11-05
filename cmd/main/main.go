@@ -7,7 +7,6 @@ import (
 
 func main() {
 	bootstrap()
-	server.GraphiQL()
 	server.Listen()
 }
 

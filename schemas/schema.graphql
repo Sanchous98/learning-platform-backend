@@ -1,4 +1,7 @@
+directive @IsGranted(roles: [Roles]!) on QUERY | MUTATION | FIELD_DEFINITION
+
 enum Roles {
+    ANONYMOUS,
     STUDENT,
     TEACHER,
     ROOT
@@ -43,6 +46,6 @@ type Course {
 }
 
 type Query {
-    user(id: ID!): User
+    user(id: ID!): User @IsGranted(roles: [STUDENT, TEACHER, ROOT])
     course(id: ID!): Course
 }
