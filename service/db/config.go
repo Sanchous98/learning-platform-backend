@@ -1,7 +1,7 @@
 package db
 
 import (
-	"learning-platform/utils"
+	"github.com/Sanchous98/project-confucius-backend/utils"
 	"os"
 )
 

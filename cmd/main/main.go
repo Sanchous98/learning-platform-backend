@@ -1,13 +1,27 @@
 package main
 
 import (
-	"learning-platform/service/server"
+	confucius "github.com/Sanchous98/project-confucius-backend"
+	"github.com/Sanchous98/project-confucius-backend/service/graphql"
+	"github.com/Sanchous98/project-confucius-backend/service/server"
+	"github.com/gorilla/mux"
+	"log"
 	"os"
 )
 
+var Container = confucius.NewContainer()
+
 func main() {
 	bootstrap()
-	server.Listen()
+	router := mux.NewRouter()
+
+	if err := Container.Init(); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := Container.Serve(router); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func bootstrap() {
@@ -49,5 +63,6 @@ func bootstrap() {
 		}
 	}
 
-	// TODO: Migrate GraphQL schema
+	Container.SetMainService("server", server.NewServer(&server.Config{}))
+	Container.Set("graphql", graphql.NewService(&graphql.Config{}))
 }

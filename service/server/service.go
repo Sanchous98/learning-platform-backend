@@ -1,109 +1,56 @@
 package server
 
 import (
-	"crypto/rand"
+	"context"
 	"crypto/tls"
-	"encoding/json"
-	"github.com/gorilla/csrf"
+	confucius "github.com/Sanchous98/project-confucius-backend"
+	"github.com/Sanchous98/project-confucius-backend/utils"
 	"github.com/gorilla/mux"
-	"github.com/graphql-go/graphql"
-	"github.com/graphql-go/handler"
 	"golang.org/x/crypto/acme/autocert"
-	"io/ioutil"
-	localGraphql "learning-platform/service/graphql"
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
-func Listen() {
-	config := localGraphql.Config{}
-	config.HydrateConfig()
-	router := mux.NewRouter()
-	router.Handle("/api", handleApi())
-	router.Handle("/graphiql", handleGraphiQL(os.Getenv("WORKING_PATH")+config.SchemaPath))
-	serverConfig := Config{}
-	serverConfig.HydrateConfig()
+type server struct {
+	config *Config
+	server *http.Server
+}
 
+func NewServer(config utils.Config) confucius.Service {
+	return &server{config.(*Config), &http.Server{Addr: ":80"}}
+}
+
+func (s *server) Init() error {
+	return s.config.HydrateConfig()
+}
+
+func (s *server) Stop() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	_ = s.server.Shutdown(ctx)
+	cancel()
+}
+
+func (s *server) Serve(router *mux.Router) error {
 	// TODO: Test on real machine, because not working for localhost
 	certManager := autocert.Manager{
-		Prompt: autocert.AcceptTOS,
-		Cache:  autocert.DirCache(os.Getenv("CERTS_PATH")),
-		// Put your domain here:
-		HostPolicy: autocert.HostWhitelist(serverConfig.Domain),
+		Prompt:     autocert.AcceptTOS,
+		Cache:      autocert.DirCache(os.Getenv("CERTS_PATH")),
+		HostPolicy: autocert.HostWhitelist(s.config.Domain),
 	}
 
-	server := &http.Server{
-		Addr:    ":443",
-		Handler: router,
-		TLSConfig: &tls.Config{
-			GetCertificate: certManager.GetCertificate,
-		},
+	s.server.Handler = certManager.HTTPHandler(router)
+	s.server.TLSConfig = &tls.Config{
+		GetCertificate: certManager.GetCertificate,
 	}
 
 	go func() {
-		log.Print("SERVER STARTED ON PORT 80")
-		log.Fatal(http.ListenAndServe(":80", certManager.HTTPHandler(router)))
+		log.Print("SERVER STARTED")
+		log.Fatal(s.server.ListenAndServe())
 	}()
 
-	log.Print("SERVER STARTED ON PORT 443")
-	log.Fatal(server.ListenAndServeTLS("", ""))
-}
+	//log.Fatal(s.server.ListenAndServe())
 
-func handleGraphiQL(schemaPath string) http.Handler {
-	b, err := ioutil.ReadFile(schemaPath)
-
-	if err != nil {
-		panic("Schema file doesn't exist")
-	}
-
-	key := make([]byte, 32)
-	_, _ = rand.Read(key)
-
-	handlerFunc := handler.New(&handler.Config{
-		Schema:     localGraphql.ResolveSchema(b),
-		Pretty:     true,
-		GraphiQL:   false,
-		Playground: true,
-	})
-
-	return handlerFunc
-}
-
-func handleApi() http.Handler {
-	router := mux.NewRouter()
-	router.NewRoute().HandlerFunc(queryHandler)
-	key := make([]byte, 32)
-	_, _ = rand.Read(key)
-	log.Print(key)
-
-	return csrf.Protect(key)(router)
-}
-
-func queryHandler(writer http.ResponseWriter, request *http.Request) {
-	config := localGraphql.Config{}
-	config.HydrateConfig()
-	b, err := ioutil.ReadFile(os.Getenv("WORKING_PATH") + config.SchemaPath)
-	if err != nil {
-		panic("Schema file doesn't exist")
-	}
-
-	query, err := ioutil.ReadAll(request.Body)
-
-	if err != nil {
-		log.Printf("Invalid query! Error: %v", err)
-	}
-
-	response := graphql.Do(graphql.Params{
-		Schema:        *localGraphql.ResolveSchema(b),
-		RequestString: string(query),
-	})
-
-	if len(response.Errors) > 0 {
-		log.Printf("failed to execute graphql operation, errors: %+v", response.Errors)
-	}
-
-	writer.Header().Set("X-CSRF-Token", csrf.Token(request))
-	jsonResponse, _ := json.Marshal(response)
-	log.Print(writer.Write(jsonResponse))
+	return nil
 }

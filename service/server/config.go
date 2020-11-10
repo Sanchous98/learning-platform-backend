@@ -1,7 +1,7 @@
 package server
 
 import (
-	"learning-platform/utils"
+	"github.com/Sanchous98/project-confucius-backend/utils"
 	"os"
 )
 
@@ -14,6 +14,14 @@ type Config struct {
 	} `yaml:"csrf"`
 }
 
-func (sc *Config) HydrateConfig() {
-	sc = utils.HydrateConfig(sc, os.Getenv("CONFIG_PATH")+"/server.yml").(*Config)
+func (sc *Config) HydrateConfig() error {
+	config, err := utils.HydrateConfig(sc, os.Getenv("CONFIG_PATH")+"/server.yml")
+
+	if err != nil {
+		return err
+	}
+
+	sc = config.(*Config)
+
+	return nil
 }

@@ -1,22 +1,21 @@
 package utils
 
 import (
-	"fmt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 )
 
 type Config interface {
-	HydrateConfig()
+	HydrateConfig() error
 }
 
-func HydrateConfig(c Config, path string) Config {
+func HydrateConfig(c Config, path string) (Config, error) {
 	config, _ := ioutil.ReadFile(path)
 	err := yaml.Unmarshal(config, c)
 
 	if err != nil {
-		panic(fmt.Sprintf("Error: %v", err))
+		return nil, err
 	}
 
-	return c
+	return c, nil
 }
