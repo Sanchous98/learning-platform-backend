@@ -10,20 +10,20 @@ import (
 	"github.com/graphql-go/handler"
 	"golang.org/x/crypto/acme/autocert"
 	"io/ioutil"
-	localGraphql "learning-platform/src/graphql"
+	localGraphql "learning-platform/service/graphql"
 	"log"
 	"net/http"
 	"os"
 )
 
 func Listen() {
-	config := GraphQLConfig{}
-	config.LoadConfig()
+	config := localGraphql.Config{}
+	config.HydrateConfig()
 	router := mux.NewRouter()
 	router.Handle("/api", handleApi())
 	router.Handle("/graphiql", handleGraphiQL(os.Getenv("WORKING_PATH")+config.SchemaPath))
-	serverConfig := ServerConfig{}
-	serverConfig.LoadConfig()
+	serverConfig := Config{}
+	serverConfig.HydrateConfig()
 
 	// TODO: Test on real machine, because not working for localhost
 	certManager := autocert.Manager{
@@ -81,8 +81,8 @@ func handleApi() http.Handler {
 }
 
 func queryHandler(writer http.ResponseWriter, request *http.Request) {
-	config := GraphQLConfig{}
-	config.LoadConfig()
+	config := localGraphql.Config{}
+	config.HydrateConfig()
 	b, err := ioutil.ReadFile(os.Getenv("WORKING_PATH") + config.SchemaPath)
 	if err != nil {
 		panic("Schema file doesn't exist")

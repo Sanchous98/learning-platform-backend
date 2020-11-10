@@ -1,7 +1,7 @@
 package main
 
 import (
-	"learning-platform/src/server"
+	"learning-platform/service/server"
 	"os"
 )
 
