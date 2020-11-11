@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	confucius "github.com/Sanchous98/project-confucius-backend"
-	"github.com/Sanchous98/project-confucius-backend/utils"
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/acme/autocert"
 	"log"
@@ -18,7 +17,7 @@ type server struct {
 	server *http.Server
 }
 
-func NewServer(config utils.Config) confucius.Service {
+func NewServer(config confucius.Config) confucius.Service {
 	return &server{config.(*Config), &http.Server{Addr: ":80"}}
 }
 

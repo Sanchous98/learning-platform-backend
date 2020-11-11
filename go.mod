@@ -3,7 +3,7 @@ module github.com/Sanchous98/project-confucius-backend
 go 1.15
 
 require (
-	github.com/bhoriuchi/graphql-go-tools v0.2.0-beta1
+	github.com/bhoriuchi/graphql-go-tools v0.0.1
 	github.com/gorilla/csrf v1.7.0
 	github.com/gorilla/mux v1.8.0
 	github.com/graphql-go/graphql v0.7.9

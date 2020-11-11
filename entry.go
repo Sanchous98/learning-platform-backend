@@ -13,24 +13,25 @@ const (
 
 type Status uint8
 
+// containerEntry is a wrapper for services, which is used to name a service, handle its status and mutes it
 type containerEntry struct {
-	entryLock sync.Mutex
-	service   Service
-	name      string
-	status    Status
+	sync.Mutex
+	service Service
+	name    string
+	status  Status
 }
 
 func (e *containerEntry) getStatus() Status {
-	e.entryLock.Lock()
-	defer e.entryLock.Unlock()
+	e.Lock()
+	defer e.Unlock()
 
 	return e.status
 }
 
 func (e *containerEntry) setStatus(status Status) {
-	e.entryLock.Lock()
+	e.Lock()
 	e.status = status
-	e.entryLock.Unlock()
+	e.Unlock()
 }
 
 func (e *containerEntry) hasStatus(status Status) bool {

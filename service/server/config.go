@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/Sanchous98/project-confucius-backend/utils"
+	"github.com/Sanchous98/project-confucius-backend"
 	"os"
 )
 
@@ -15,7 +15,7 @@ type Config struct {
 }
 
 func (sc *Config) HydrateConfig() error {
-	config, err := utils.HydrateConfig(sc, os.Getenv("CONFIG_PATH")+"/server.yml")
+	config, err := confucius.HydrateConfig(sc, os.Getenv("CONFIG_PATH")+"/server.yml")
 
 	if err != nil {
 		return err

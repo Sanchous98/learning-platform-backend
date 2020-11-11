@@ -4,22 +4,18 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"net/http"
 	"sync"
 )
 
 type (
+	// Basic Service interface
 	Service interface {
 		Serve(handler *mux.Router) error
 		Stop()
 		Init() error
 	}
 
-	Middleware interface {
-		Service
-		Middleware(handlerFunc http.HandlerFunc) http.HandlerFunc
-	}
-
+	// Basic Container interface
 	Container interface {
 		Get(service string) (*Service, Status)
 		Set(name string, service Service)
@@ -27,16 +23,17 @@ type (
 		Service
 	}
 
+	// Container of services. It has got main service, which is launched the last and usually is an HTTP server
 	ServerContainer interface {
 		Container
 		SetMainService(name string, service Service)
 	}
 
 	serviceContainer struct {
-		containerLock sync.Mutex
-		services      []*containerEntry
-		mainService   *containerEntry
-		errorChannel  chan error
+		sync.Mutex
+		services     []*containerEntry
+		mainService  *containerEntry
+		errorChannel chan error
 	}
 )
 
@@ -48,20 +45,20 @@ func NewContainer() ServerContainer {
 }
 
 func (s *serviceContainer) SetMainService(name string, service Service) {
-	s.containerLock.Lock()
+	s.Lock()
 	s.mainService = &containerEntry{
 		name:    name,
 		service: service,
 		status:  Inactive,
 	}
-	s.containerLock.Unlock()
+	s.Unlock()
 }
 
 func (s *serviceContainer) Get(service string) (*Service, Status) {
-	s.containerLock.Lock()
-	defer s.containerLock.Unlock()
+	s.Lock()
+	defer s.Unlock()
 
-	if s.mainService.name == service {
+	if s.mainService != nil && s.mainService.name == service {
 		return &s.mainService.service, s.mainService.getStatus()
 	}
 
@@ -75,18 +72,18 @@ func (s *serviceContainer) Get(service string) (*Service, Status) {
 }
 
 func (s *serviceContainer) Set(name string, service Service) {
-	s.containerLock.Lock()
+	s.Lock()
 	s.services = append(s.services, &containerEntry{
 		name:    name,
 		service: service,
 		status:  Inactive,
 	})
-	s.containerLock.Unlock()
+	s.Unlock()
 }
 
 func (s *serviceContainer) Has(service string) bool {
-	s.containerLock.Lock()
-	defer s.containerLock.Unlock()
+	s.Lock()
+	defer s.Unlock()
 
 	for _, entry := range s.services {
 		if entry.name == service {
@@ -97,6 +94,7 @@ func (s *serviceContainer) Has(service string) bool {
 	return false
 }
 
+// Serve launches all services
 func (s *serviceContainer) Serve(handler *mux.Router) error {
 	running := 0
 	for _, entry := range s.services {
@@ -134,6 +132,7 @@ func (s *serviceContainer) Serve(handler *mux.Router) error {
 	return nil
 }
 
+// Stop shuts down all services
 func (s *serviceContainer) Stop() {
 	for _, entry := range s.services {
 		if entry.hasStatus(Serving) {
@@ -144,9 +143,12 @@ func (s *serviceContainer) Stop() {
 	}
 }
 
+// Init initializes all services
 func (s *serviceContainer) Init() error {
-	if err := initService(s.mainService); err != nil {
-		return err
+	if s.mainService != nil {
+		if err := initService(s.mainService); err != nil {
+			return err
+		}
 	}
 
 	for _, entry := range s.services {
