@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	confucius "github.com/Sanchous98/project-confucius-backend"
+	"github.com/Sanchous98/project-confucius-backend/utils"
 	tools "github.com/bhoriuchi/graphql-go-tools"
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
@@ -21,7 +22,7 @@ type graphQL struct {
 	config *Config
 }
 
-func NewService(config confucius.Config) confucius.Service {
+func NewService(config utils.Config) confucius.Service {
 	return &graphQL{config.(*Config)}
 }
 

@@ -3,13 +3,12 @@ package main
 import (
 	confucius "github.com/Sanchous98/project-confucius-backend"
 	"github.com/Sanchous98/project-confucius-backend/service/graphql"
-	"github.com/Sanchous98/project-confucius-backend/service/server"
 	"github.com/gorilla/mux"
 	"log"
 	"os"
 )
 
-var Container = confucius.NewContainer()
+var Container = confucius.NewContainer(&confucius.Config{})
 
 func main() {
 	bootstrap()
@@ -63,6 +62,5 @@ func bootstrap() {
 		}
 	}
 
-	Container.SetMainService("server", server.NewServer(&server.Config{}))
 	Container.Set("graphql", graphql.NewService(&graphql.Config{}))
 }

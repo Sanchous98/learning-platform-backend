@@ -19,7 +19,7 @@ func (m MockService) Init() error {
 }
 
 func TestRegisterService(t *testing.T) {
-	container = NewContainer()
+	container = NewContainer(&Config{})
 	container.Set("mock_service", MockService{})
 
 	if !container.Has("mock_service") {

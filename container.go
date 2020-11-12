@@ -1,10 +1,18 @@
 package confucius
 
 import (
+	"context"
+	"crypto/tls"
 	"fmt"
+	"github.com/Sanchous98/project-confucius-backend/utils"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/acme/autocert"
+	"log"
+	"net/http"
+	"os"
 	"sync"
+	"time"
 )
 
 type (
@@ -23,44 +31,27 @@ type (
 		Service
 	}
 
-	// Container of services. It has got main service, which is launched the last and usually is an HTTP server
-	ServerContainer interface {
-		Container
-		SetMainService(name string, service Service)
-	}
-
 	serviceContainer struct {
 		sync.Mutex
+		config       *Config
+		server       *http.Server
 		services     []*containerEntry
-		mainService  *containerEntry
 		errorChannel chan error
 	}
 )
 
-func NewContainer() ServerContainer {
+func NewContainer(config utils.Config) Container {
 	return &serviceContainer{
 		services:     make([]*containerEntry, 0),
 		errorChannel: make(chan error),
+		config:       config.(*Config),
+		server:       &http.Server{Addr: ":80"},
 	}
-}
-
-func (s *serviceContainer) SetMainService(name string, service Service) {
-	s.Lock()
-	s.mainService = &containerEntry{
-		name:    name,
-		service: service,
-		status:  Inactive,
-	}
-	s.Unlock()
 }
 
 func (s *serviceContainer) Get(service string) (*Service, Status) {
 	s.Lock()
 	defer s.Unlock()
-
-	if s.mainService != nil && s.mainService.name == service {
-		return &s.mainService.service, s.mainService.getStatus()
-	}
 
 	for _, e := range s.services {
 		if e.name == service {
@@ -95,31 +86,19 @@ func (s *serviceContainer) Has(service string) bool {
 }
 
 // Serve launches all services
-func (s *serviceContainer) Serve(handler *mux.Router) error {
+func (s *serviceContainer) Serve(router *mux.Router) error {
 	running := 0
 	for _, entry := range s.services {
 		if entry.hasStatus(Ok) {
 			running++
-			go func(e *containerEntry) {
-				e.setStatus(Serving)
-				if err := e.service.Serve(handler); err != nil {
-					s.errorChannel <- errors.Wrap(err, fmt.Sprintf("[%s]", e.name))
-				}
-				e.setStatus(Stopped)
-			}(entry)
+			entry.setStatus(Serving)
+			if err := entry.service.Serve(router); err != nil {
+				s.errorChannel <- errors.Wrap(err, fmt.Sprintf("[%s]", entry.name))
+			}
 		}
 	}
 
-	if s.mainService.hasStatus(Ok) {
-		running++
-		s.mainService.setStatus(Serving)
-		if err := s.mainService.service.Serve(handler); err != nil {
-			s.errorChannel <- errors.Wrap(err, fmt.Sprintf("[%s]", s.mainService.name))
-		}
-		s.mainService.setStatus(Stopped)
-	}
-
-	// simple handler to handle empty configs
+	// simple router to handle empty configs
 	if running == 0 {
 		return nil
 	}
@@ -129,7 +108,7 @@ func (s *serviceContainer) Serve(handler *mux.Router) error {
 		return fail
 	}
 
-	return nil
+	return s.selfServe(router)
 }
 
 // Stop shuts down all services
@@ -141,23 +120,19 @@ func (s *serviceContainer) Stop() {
 			entry.setStatus(Stopped)
 		}
 	}
+
+	s.selfStop()
 }
 
 // Init initializes all services
 func (s *serviceContainer) Init() error {
-	if s.mainService != nil {
-		if err := initService(s.mainService); err != nil {
-			return err
-		}
-	}
-
 	for _, entry := range s.services {
 		if err := initService(entry); err != nil {
 			return err
 		}
 	}
 
-	return nil
+	return s.selfInit()
 }
 
 func initService(entry *containerEntry) error {
@@ -174,4 +149,37 @@ func initService(entry *containerEntry) error {
 	entry.setStatus(Ok)
 
 	return nil
+}
+
+func (s *serviceContainer) selfInit() error {
+	return s.config.HydrateConfig()
+}
+
+func (s *serviceContainer) selfServe(router *mux.Router) error {
+	// TODO: Test on real machine, because not working for localhost
+	certManager := autocert.Manager{
+		Prompt:     autocert.AcceptTOS,
+		Cache:      autocert.DirCache(os.Getenv("CERTS_PATH")),
+		HostPolicy: autocert.HostWhitelist(s.config.Domain),
+	}
+
+	s.server.Handler = certManager.HTTPHandler(router)
+	s.server.TLSConfig = &tls.Config{
+		GetCertificate: certManager.GetCertificate,
+	}
+
+	go func() {
+		log.Print("SERVER STARTED")
+		log.Fatal(s.server.ListenAndServe())
+	}()
+
+	//log.Fatal(s.server.ListenAndServe())
+
+	return nil
+}
+
+func (s *serviceContainer) selfStop() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	_ = s.server.Shutdown(ctx)
+	cancel()
 }

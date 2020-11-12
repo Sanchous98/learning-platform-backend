@@ -1,3 +1,4 @@
+# @IsGranted limits access to users, using roles
 directive @IsGranted(roles: [Roles]!) on QUERY | MUTATION | FIELD_DEFINITION
 
 enum Roles {

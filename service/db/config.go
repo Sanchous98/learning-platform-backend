@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/Sanchous98/project-confucius-backend"
+	"github.com/Sanchous98/project-confucius-backend/utils"
 	"os"
 )
 
@@ -11,5 +11,5 @@ type Config struct {
 }
 
 func (db *Config) HydrateConfig() {
-	db = confucius.HydrateConfig(db, os.Getenv("CONFIG_PATH")+"/graphql.yml").(*Config)
+	db = utils.HydrateConfig(db, os.Getenv("CONFIG_PATH")+"/graphql.yml").(*Config)
 }

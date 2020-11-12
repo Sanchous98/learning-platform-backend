@@ -2,6 +2,7 @@ package authentication
 
 import (
 	confucius "github.com/Sanchous98/project-confucius-backend"
+	"github.com/Sanchous98/project-confucius-backend/utils"
 	"github.com/gorilla/mux"
 )
 
@@ -10,7 +11,7 @@ type authentication struct {
 	config *Config
 }
 
-func NewService(config confucius.Config) confucius.Service {
+func NewService(config utils.Config) confucius.Service {
 	return &authentication{config.(*Config)}
 }
 

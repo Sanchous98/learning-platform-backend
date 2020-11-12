@@ -1,23 +1,27 @@
 package confucius
 
 import (
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
+	"github.com/Sanchous98/project-confucius-backend/utils"
+	"os"
 )
 
-// Config is basic interface for every service configuration
-type Config interface {
-	HydrateConfig() error
+type Config struct {
+	Domain    string `yaml:"domain"`
+	CertsPath string `yaml:"certs_path"`
+	CSRF      struct {
+		UseCookies    bool     `yaml:"useCookies"`
+		ExcludedPaths []string `yaml:"excludedPaths"`
+	} `yaml:"csrf"`
 }
 
-// HydrateConfig is a basic function to read configuration from a yaml
-func HydrateConfig(c Config, path string) (Config, error) {
-	config, _ := ioutil.ReadFile(path)
-	err := yaml.Unmarshal(config, c)
+func (sc *Config) HydrateConfig() error {
+	config, err := utils.HydrateConfig(sc, os.Getenv("CONFIG_PATH")+"/server.yml")
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return c, nil
+	sc = config.(*Config)
+
+	return nil
 }
