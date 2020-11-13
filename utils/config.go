@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 )
 
@@ -11,9 +10,9 @@ type Config interface {
 }
 
 // HydrateConfig is a basic function to read configuration from a yaml
-func HydrateConfig(c Config, path string) (Config, error) {
+func HydrateConfig(c Config, path string, unmarshalMethod func(in []byte, out interface{}) error) (Config, error) {
 	config, _ := ioutil.ReadFile(path)
-	err := yaml.Unmarshal(config, c)
+	err := unmarshalMethod(config, c)
 
 	if err != nil {
 		return nil, err

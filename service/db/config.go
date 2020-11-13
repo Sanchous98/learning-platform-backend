@@ -2,6 +2,7 @@ package db
 
 import (
 	"github.com/Sanchous98/project-confucius-backend/utils"
+	"gopkg.in/yaml.v2"
 	"os"
 )
 
@@ -10,6 +11,14 @@ type Config struct {
 	Connections       map[string]interface{}
 }
 
-func (db *Config) HydrateConfig() {
-	db = utils.HydrateConfig(db, os.Getenv("CONFIG_PATH")+"/graphql.yml").(*Config)
+func (db *Config) HydrateConfig() error {
+	config, err := utils.HydrateConfig(db, os.Getenv("CONFIG_PATH")+"/database.yml", yaml.Unmarshal)
+
+	if err != nil {
+		return err
+	}
+
+	db = config.(*Config)
+
+	return nil
 }

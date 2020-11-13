@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"gopkg.in/yaml.v2"
 	"os"
 	"testing"
 )
@@ -19,7 +20,7 @@ func TestHydrateConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	config, err := HydrateConfig(&mockConfig{}, workDir+"/test/config/mock.yml")
+	config, err := HydrateConfig(&mockConfig{}, workDir+"/test/config/mock.yml", yaml.Unmarshal)
 
 	if err != nil {
 		t.Fatal(err)
