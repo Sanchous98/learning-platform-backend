@@ -33,19 +33,17 @@ type (
 
 	serviceContainer struct {
 		sync.Mutex
-		config       *Config
-		server       *http.Server
-		services     []*containerEntry
-		errorChannel chan error
+		config   *Config
+		server   *http.Server
+		services []*containerEntry
 	}
 )
 
 func NewContainer(config utils.Config) Container {
 	return &serviceContainer{
-		services:     make([]*containerEntry, 0),
-		errorChannel: make(chan error),
-		config:       config.(*Config),
-		server:       &http.Server{Addr: ":80"},
+		services: make([]*containerEntry, 0),
+		config:   config.(*Config),
+		server:   &http.Server{Addr: ":80"},
 	}
 }
 
@@ -93,7 +91,7 @@ func (s *serviceContainer) Serve(router *mux.Router) error {
 			running++
 			entry.setStatus(Serving)
 			if err := entry.service.Serve(router); err != nil {
-				s.errorChannel <- errors.Wrap(err, fmt.Sprintf("[%s]", entry.name))
+				return errors.Wrap(err, fmt.Sprintf("[%s]", entry.name))
 			}
 		}
 	}
@@ -101,11 +99,6 @@ func (s *serviceContainer) Serve(router *mux.Router) error {
 	// simple router to handle empty configs
 	if running == 0 {
 		return nil
-	}
-
-	for fail := range s.errorChannel {
-		s.Stop()
-		return fail
 	}
 
 	return s.selfServe(router)
@@ -168,12 +161,8 @@ func (s *serviceContainer) selfServe(router *mux.Router) error {
 		GetCertificate: certManager.GetCertificate,
 	}
 
-	go func() {
-		log.Print("SERVER STARTED")
-		log.Fatal(s.server.ListenAndServe())
-	}()
-
-	//log.Fatal(s.server.ListenAndServe())
+	log.Print("SERVER STARTED")
+	log.Fatal(s.server.ListenAndServe())
 
 	return nil
 }
