@@ -1,0 +1,6 @@
+domain: "localhost"
+certs_path: "/certs"
+csrf:
+  useCookies: true
+  excludedPaths:
+    - "*"
